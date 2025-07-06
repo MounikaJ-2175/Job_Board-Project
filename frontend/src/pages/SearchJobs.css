@@ -1,0 +1,46 @@
+.search-jobs {
+  padding: 2rem;
+}
+
+.filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.filters-container input,
+.filters-container select,
+.filters-container button {
+  padding: 10px;
+  font-size: 1rem;
+  min-width: 180px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.filters-container button {
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  border: none;
+  transition: background 0.3s;
+}
+
+.filters-container button:hover {
+  background-color: #0056b3;
+}
+
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.job-card {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+}
