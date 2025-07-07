@@ -28,6 +28,17 @@ function EmployerDashboard() {
     }
   };
 
+  const updateStatus = async (jobId, appId, newStatus) => {
+    try {
+      await API.put(`/jobs/${jobId}/applicants/${appId}/status`, { status: newStatus });
+      toast.success(`Status updated to ${newStatus}`);
+      fetchJobs(); // Refresh data
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update status');
+    }
+  };
+
   useEffect(() => {
     fetchJobs();
   }, []);
@@ -64,12 +75,7 @@ function EmployerDashboard() {
             <p><strong>Posted On:</strong> {new Date(job.createdAt).toLocaleDateString()}</p>
 
             <div className="actions" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-              <button
-                className="secondary-btn"
-                onClick={() => navigate(`/edit-job/${job._id}`)}
-              >
-                ✏️ Edit
-              </button>
+              <button className="secondary-btn" onClick={() => navigate(`/edit-job/${job._id}`)}>✏️ Edit</button>
               <button
                 className="secondary-btn"
                 onClick={async () => {
@@ -77,15 +83,13 @@ function EmployerDashboard() {
                     try {
                       await API.delete(`/jobs/${job._id}`);
                       toast.success('Job deleted');
-                      fetchJobs(); // Refresh job list
+                      fetchJobs();
                     } catch {
                       toast.error('Failed to delete job');
                     }
                   }
                 }}
-              >
-                🗑️ Delete
-              </button>
+              >🗑️ Delete</button>
             </div>
 
             <h4 style={{ marginTop: '1rem' }}>👥 Applicants ({job.applicants?.length || 0})</h4>
@@ -106,16 +110,32 @@ function EmployerDashboard() {
                     <p><strong>Qualification:</strong> {app.user.qualification}</p>
                   )}
                   <p><strong>Experience:</strong> {app.user.experienceLevel}</p>
+
                   {app.user.resume && (
                     <a
-                      href={`${process.env.REACT_APP_API_URL?.replace('/api', '')}/uploads/${app.user.resume}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: '#2563eb', fontWeight: '500' }}
-                    >
-                      📄 View Resume
-                    </a>
+                       href={`http://localhost:5000/uploads/${app.user.resume}`}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style={{ color: '#2563eb', fontWeight: '500' }}
+                      >
+                        📄 View Resume
+                      </a>
+
                   )}
+
+                  {/* Applicant Status and Update */}
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <strong>Status:</strong>{' '}
+                    <select
+                      value={app.status}
+                      onChange={(e) => updateStatus(job._id, app._id, e.target.value)}
+                      style={{ padding: '4px 8px', borderRadius: '6px' }}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Shortlisted">Shortlisted</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
                 </div>
               ))
             ) : (

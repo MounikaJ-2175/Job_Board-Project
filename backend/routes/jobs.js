@@ -5,6 +5,8 @@ const auth = require('../middleware/auth');
 const Job = require('../models/Job');
 const User = require('../models/User');
 const Application = require('../models/Application');
+const path = require('path');
+const fs = require('fs');
 
 // ✅ POST job
 router.post('/', auth, async (req, res) => {
@@ -42,7 +44,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ✅ GET my jobs - Moved ABOVE /:id
+// ✅ GET my jobs
 router.get('/mine', auth, async (req, res) => {
   try {
     const jobs = await Job.find({ postedBy: req.user.id }).sort({ createdAt: -1 });
@@ -53,7 +55,7 @@ router.get('/mine', auth, async (req, res) => {
   }
 });
 
-// ✅ GET job by ID with validation
+// ✅ GET job by ID
 router.get('/:id', async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ message: 'Invalid job ID' });
@@ -79,8 +81,7 @@ router.put('/:id', auth, async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ message: 'Job not found' });
 
-    const user = await User.findById(req.user.id);
-    if (user.role !== 'employer' || job.postedBy.toString() !== req.user.id) {
+    if (job.postedBy.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
@@ -102,8 +103,7 @@ router.delete('/:id', auth, async (req, res) => {
     const job = await Job.findById(req.params.id);
     if (!job) return res.status(404).json({ message: 'Job not found' });
 
-    const user = await User.findById(req.user.id);
-    if (user.role !== 'employer' || job.postedBy.toString() !== req.user.id) {
+    if (job.postedBy.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
@@ -115,7 +115,7 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// ✅ GET applicants for job
+// ✅ GET applicants for job with status
 router.get('/:id/applicants', auth, async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(400).json({ message: 'Invalid job ID' });
@@ -129,12 +129,80 @@ router.get('/:id/applicants', auth, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    const applications = await Application.find({ job: job._id }).populate('jobSeeker', 'username email skills experienceLevel resume');
-    const formatted = applications.map(app => ({ _id: app._id, user: app.jobSeeker }));
+    const applications = await Application.find({ job: job._id })
+      .populate('jobSeeker', 'username email skills experienceLevel resume')
+      .sort({ createdAt: -1 });
+
+    const formatted = applications.map(app => ({
+      _id: app._id,
+      status: app.status,
+      appliedAt: app.createdAt,
+      user: app.jobSeeker
+    }));
+
     res.json(formatted);
   } catch (err) {
     console.error('GET /jobs/:id/applicants error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ✅ Update application status
+router.put('/:jobId/applicants/:appId/status', auth, async (req, res) => {
+  const { jobId, appId } = req.params;
+  const { status } = req.body;
+
+  if (!['Shortlisted', 'Rejected', 'Pending'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status' });
+  }
+
+  try {
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    if (job.postedBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const application = await Application.findById(appId);
+    if (!application || application.job.toString() !== jobId) {
+      return res.status(404).json({ message: 'Application not found for this job' });
+    }
+
+    application.status = status;
+    await application.save();
+    res.json({ message: 'Application status updated', application });
+  } catch (err) {
+    console.error('PUT /jobs/:jobId/applicants/:appId/status error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ✅ Download resume
+router.get('/:jobId/applicants/:appId/resume', auth, async (req, res) => {
+  try {
+    const { jobId, appId } = req.params;
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    if (job.postedBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const application = await Application.findById(appId).populate('jobSeeker');
+    if (!application) return res.status(404).json({ message: 'Application not found' });
+
+    const resumePath = application.jobSeeker.resume;
+    if (!resumePath) return res.status(404).json({ message: 'Resume not uploaded' });
+
+    const fullPath = path.join(__dirname, '..', 'uploads', resumePath); // Adjust path as needed
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'Resume file not found' });
+
+    res.download(fullPath);
+  } catch (err) {
+    console.error('GET /jobs/:jobId/applicants/:appId/resume error:', err);
+    res.status(500).json({ message: 'Error downloading resume' });
   }
 });
 
@@ -161,7 +229,6 @@ router.post('/:id/apply', auth, async (req, res) => {
     console.error('POST /jobs/:id/apply error:', err);
     res.status(500).json({ message: 'Server error' });
   }
-  
 });
 
 module.exports = router;

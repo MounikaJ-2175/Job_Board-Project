@@ -18,7 +18,6 @@ import ViewApplicants from './pages/ViewApplicants';
 import SearchJobs from './pages/SearchJobs';
 import DashboardRedirect from './pages/DashboardRedirect';
 
-
 const PrivateRoute = ({ children, token, role, allowedRole }) => {
   if (!token) return <Navigate to="/login" />;
   if (allowedRole && role !== allowedRole) return <Navigate to="/login" />;

@@ -7,7 +7,7 @@ function PostJob() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     title: '',
-    company: '', 
+    company: '',
     description: '',
     location: '',
     jobType: '',
@@ -22,17 +22,19 @@ function PostJob() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await API.post('/jobs', form); // Token assumed to be set in Axios instance
-      toast.success('Job posted successfully');
+      // POST request will be sent with token automatically via Axios instance
+      await API.post('/jobs', form);
+      toast.success('🎉 Job posted successfully!');
       navigate('/employer-dashboard');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to post job');
+      console.error('Error posting job:', err);
+      toast.error(err.response?.data?.message || '❌ Failed to post job');
     }
   };
 
   return (
     <div className="form">
-      <h2>Post a Job</h2>
+      <h2>📝 Post a Job</h2>
       <form onSubmit={handleSubmit}>
         <input
           name="title"
@@ -93,7 +95,7 @@ function PostJob() {
           onChange={handleChange}
           required
         />
-        <button type="submit">Post Job</button>
+        <button type="submit" className="btn">Post Job</button>
       </form>
     </div>
   );
